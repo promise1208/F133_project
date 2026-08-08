@@ -26,10 +26,13 @@ int main(void)
 		.dig_t3 = 32767,
 	};
 	int32_t t_fine = 0;
+	int32_t temperature_centi_c = 0;
 	int32_t extreme_t_fine = 0;
 	uint32_t pressure_q24_8 = 0;
 
-	assert(dawn_bmp280_compensate_temp(&calib, 519888, &t_fine) == 2508);
+	assert(dawn_bmp280_compensate_temp(&calib, 519888, &temperature_centi_c,
+						    &t_fine));
+	assert(temperature_centi_c == 2508);
 	assert(t_fine == 128422);
 	assert(dawn_bmp280_compensate_press(&calib, 415148, t_fine,
 						   &pressure_q24_8));
@@ -44,14 +47,41 @@ int main(void)
 	assert(!dawn_bmp280_compensate_press(NULL, 415148, t_fine,
 						    &pressure_q24_8));
 	assert(!dawn_bmp280_compensate_press(&calib, 415148, t_fine, NULL));
-	assert(dawn_bmp280_compensate_temp(NULL, 519888, &t_fine) == 0);
-	assert(dawn_bmp280_compensate_temp(&calib, 519888, NULL) == 0);
+
+	temperature_centi_c = 1111;
+	t_fine = 2222;
+	assert(!dawn_bmp280_compensate_temp(NULL, 519888,
+						    &temperature_centi_c, &t_fine));
+	assert(temperature_centi_c == 1111);
+	assert(t_fine == 2222);
+
+	t_fine = 3333;
+	assert(!dawn_bmp280_compensate_temp(&calib, 519888, NULL, &t_fine));
+	assert(t_fine == 3333);
+
+	temperature_centi_c = 4444;
+	assert(!dawn_bmp280_compensate_temp(&calib, 519888,
+						    &temperature_centi_c, NULL));
+	assert(temperature_centi_c == 4444);
 
 	assert(dawn_bmp280_compensate_temp(&extreme_temp, 1048575,
-						    &extreme_t_fine) == 81916);
+						    &temperature_centi_c, &extreme_t_fine));
+	assert(temperature_centi_c == 81916);
 	assert(extreme_t_fine == 4194096);
-	assert(dawn_bmp280_compensate_temp(&calib, -1, &t_fine) == 0);
-	assert(dawn_bmp280_compensate_temp(&calib, 1048576, &t_fine) == 0);
+
+	temperature_centi_c = 5555;
+	t_fine = 6666;
+	assert(!dawn_bmp280_compensate_temp(&calib, -1,
+						    &temperature_centi_c, &t_fine));
+	assert(temperature_centi_c == 5555);
+	assert(t_fine == 6666);
+
+	temperature_centi_c = 7777;
+	t_fine = 8888;
+	assert(!dawn_bmp280_compensate_temp(&calib, 1048576,
+						    &temperature_centi_c, &t_fine));
+	assert(temperature_centi_c == 7777);
+	assert(t_fine == 8888);
 
 	calib.dig_p1 = 1;
 	assert(!dawn_bmp280_compensate_press(&calib, 415148, t_fine,

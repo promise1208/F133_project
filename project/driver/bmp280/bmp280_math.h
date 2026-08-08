@@ -73,46 +73,47 @@ static inline bool dawn_bmp280_fits_s32(dawn_bmp280_s64 value)
 	return value >= -2147483648LL && value <= 2147483647LL;
 }
 
-static inline dawn_bmp280_s32 dawn_bmp280_compensate_temp(
+static inline bool dawn_bmp280_compensate_temp(
 	const struct dawn_bmp280_calib *calib, dawn_bmp280_s32 adc_temp,
-	dawn_bmp280_s32 *t_fine)
+	dawn_bmp280_s32 *temperature_centi_c, dawn_bmp280_s32 *t_fine)
 {
 	dawn_bmp280_s64 var1, var2, term, t_fine_value, temp_value;
 
-	if (calib == 0 || t_fine == 0)
-		return 0;
+	if (calib == 0 || temperature_centi_c == 0 || t_fine == 0)
+		return false;
 	if (adc_temp < 0 || adc_temp > 1048575)
-		return 0;
+		return false;
 
 	var1 = (dawn_bmp280_s64)(adc_temp >> 3);
 	term = (dawn_bmp280_s64)calib->dig_t1;
 	if (dawn_bmp280_mul_s64(term, 2, &term) ||
 	    dawn_bmp280_sub_s64(var1, term, &var1) ||
 	    dawn_bmp280_mul_s64(var1, calib->dig_t2, &term))
-		return 0;
+		return false;
 	var1 = term >> 11;
 
 	var2 = (dawn_bmp280_s64)(adc_temp >> 4);
 	if (dawn_bmp280_sub_s64(var2, calib->dig_t1, &var2) ||
 	    dawn_bmp280_mul_s64(var2, var2, &term))
-		return 0;
+		return false;
 	var2 = term >> 12;
 	if (dawn_bmp280_mul_s64(var2, calib->dig_t3, &term))
-		return 0;
+		return false;
 	var2 = term >> 14;
 
 	if (dawn_bmp280_add_s64(var1, var2, &t_fine_value) ||
 	    dawn_bmp280_mul_s64(t_fine_value, 5, &temp_value) ||
 	    dawn_bmp280_add_s64(temp_value, 128, &temp_value))
-		return 0;
+		return false;
 	temp_value >>= 8;
 
 	if (!dawn_bmp280_fits_s32(t_fine_value) ||
 	    !dawn_bmp280_fits_s32(temp_value))
-		return 0;
+		return false;
 
+	*temperature_centi_c = (dawn_bmp280_s32)temp_value;
 	*t_fine = (dawn_bmp280_s32)t_fine_value;
-	return (dawn_bmp280_s32)temp_value;
+	return true;
 }
 
 static inline bool dawn_bmp280_compensate_press(
