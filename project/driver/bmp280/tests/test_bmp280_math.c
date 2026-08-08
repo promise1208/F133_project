@@ -20,7 +20,13 @@ int main(void)
 		.dig_p8 = -14600,
 		.dig_p9 = 6000,
 	};
+	struct dawn_bmp280_calib extreme_temp = {
+		.dig_t1 = 0,
+		.dig_t2 = 32767,
+		.dig_t3 = 32767,
+	};
 	int32_t t_fine = 0;
+	int32_t extreme_t_fine = 0;
 	uint32_t pressure_q24_8 = 0;
 
 	assert(dawn_bmp280_compensate_temp(&calib, 519888, &t_fine) == 2508);
@@ -40,6 +46,19 @@ int main(void)
 	assert(!dawn_bmp280_compensate_press(&calib, 415148, t_fine, NULL));
 	assert(dawn_bmp280_compensate_temp(NULL, 519888, &t_fine) == 0);
 	assert(dawn_bmp280_compensate_temp(&calib, 519888, NULL) == 0);
+
+	assert(dawn_bmp280_compensate_temp(&extreme_temp, 1048575,
+						    &extreme_t_fine) == 81916);
+	assert(extreme_t_fine == 4194096);
+	assert(dawn_bmp280_compensate_temp(&calib, -1, &t_fine) == 0);
+	assert(dawn_bmp280_compensate_temp(&calib, 1048576, &t_fine) == 0);
+
+	calib.dig_p1 = 1;
+	assert(!dawn_bmp280_compensate_press(&calib, 415148, t_fine,
+						    &pressure_q24_8));
+	calib.dig_p1 = 36477;
+	assert(!dawn_bmp280_compensate_press(&calib, 1048576, t_fine,
+						    &pressure_q24_8));
 
 	puts("BMP280 math tests passed");
 	return 0;
