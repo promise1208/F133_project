@@ -38,6 +38,8 @@ int main(void)
 	assert(!dawn_bmp280_compensate_press(NULL, 415148, t_fine,
 						    &pressure_q24_8));
 	assert(!dawn_bmp280_compensate_press(&calib, 415148, t_fine, NULL));
+	assert(dawn_bmp280_compensate_temp(NULL, 519888, &t_fine) == 0);
+	assert(dawn_bmp280_compensate_temp(&calib, 519888, NULL) == 0);
 
 	puts("BMP280 math tests passed");
 	return 0;

@@ -41,6 +41,9 @@ static inline dawn_bmp280_s32 dawn_bmp280_compensate_temp(
 {
 	dawn_bmp280_s32 var1, var2;
 
+	if (calib == 0 || t_fine == 0)
+		return 0;
+
 	var1 = (((adc_temp >> 3) - ((dawn_bmp280_s32)calib->dig_t1 << 1)) *
 		(dawn_bmp280_s32)calib->dig_t2) >> 11;
 	var2 = (((((adc_temp >> 4) - (dawn_bmp280_s32)calib->dig_t1) *
