@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: GPL-2.0 */
+
 #ifndef DAWN_BMP280_MATH_H
 #define DAWN_BMP280_MATH_H
 

@@ -28,7 +28,11 @@
 #define DAWN_BMP280_REG_DATA        0xf7
 #define DAWN_BMP280_CHIP_ID         0x58
 #define DAWN_BMP280_CTRL_FORCED_X1  0x25
-#define DAWN_BMP280_STATUS_MEASURING BIT(3)
+#define DAWN_BMP280_FORCED_START_DELAY_US     7000
+#define DAWN_BMP280_FORCED_START_DELAY_MAX_US 8000
+#define DAWN_BMP280_MEASUREMENT_TIMEOUT_MS 20
+#define DAWN_BMP280_STATUS_IM_UPDATE      BIT(0)
+#define DAWN_BMP280_STATUS_MEASURING      BIT(3)
 
 struct dawn_bmp280_data {
 	struct i2c_client *client;
@@ -37,18 +41,46 @@ struct dawn_bmp280_data {
 	u8 chip_id;
 };
 
+static int dawn_bmp280_wait_ready(struct dawn_bmp280_data *data,
+				  bool conversion_started)
+{
+	unsigned long deadline;
+	int status;
+
+	deadline = jiffies +
+		   msecs_to_jiffies(DAWN_BMP280_MEASUREMENT_TIMEOUT_MS);
+	if (conversion_started)
+		usleep_range(DAWN_BMP280_FORCED_START_DELAY_US,
+			     DAWN_BMP280_FORCED_START_DELAY_MAX_US);
+
+	for (;;) {
+		if (time_after_eq(jiffies, deadline))
+			return -ETIMEDOUT;
+
+		status = i2c_smbus_read_byte_data(data->client,
+						 DAWN_BMP280_REG_STATUS);
+		if (status < 0)
+			return status;
+		if (time_after_eq(jiffies, deadline))
+			return -ETIMEDOUT;
+		if (!(status & (DAWN_BMP280_STATUS_IM_UPDATE |
+				DAWN_BMP280_STATUS_MEASURING)))
+			return 0;
+
+		usleep_range(1000, 2000);
+	}
+}
+
 static int dawn_bmp280_measure(struct dawn_bmp280_data *data,
 			       s32 *temperature_centi_c, u32 *pressure_pa)
 {
 	u8 raw_data[6];
-	unsigned long deadline;
 	u32 adc_press;
 	u32 adc_temp;
 	u32 pressure_q24_8;
 	u64 pressure_pa_value;
 	s32 temperature;
 	s32 t_fine;
-	int status;
 	int ret;
 
 	if (!temperature_centi_c || !pressure_pa)
@@ -60,22 +92,9 @@ static int dawn_bmp280_measure(struct dawn_bmp280_data *data,
 	if (ret < 0)
 		return ret;
 
-	deadline = jiffies + msecs_to_jiffies(20);
-	for (;;) {
-		if (time_after_eq(jiffies, deadline))
-			return -ETIMEDOUT;
-
-		status = i2c_smbus_read_byte_data(data->client,
-						 DAWN_BMP280_REG_STATUS);
-		if (status < 0)
-			return status;
-		if (!(status & DAWN_BMP280_STATUS_MEASURING))
-			break;
-
-		if (time_after_eq(jiffies, deadline))
-			return -ETIMEDOUT;
-		usleep_range(1000, 2000);
-	}
+	ret = dawn_bmp280_wait_ready(data, true);
+	if (ret)
+		return ret;
 
 	ret = i2c_smbus_read_i2c_block_data(data->client,
 					    DAWN_BMP280_REG_DATA,
@@ -174,29 +193,43 @@ static int dawn_bmp280_probe(struct i2c_client *client,
 
 	if (!i2c_check_functionality(client->adapter,
 				    I2C_FUNC_SMBUS_BYTE_DATA |
-				    I2C_FUNC_SMBUS_I2C_BLOCK))
-		return -EOPNOTSUPP;
+				    I2C_FUNC_SMBUS_I2C_BLOCK)) {
+		ret = -EOPNOTSUPP;
+		goto err_probe;
+	}
 
 	data = devm_kzalloc(&client->dev, sizeof(*data), GFP_KERNEL);
-	if (!data)
-		return -ENOMEM;
+	if (!data) {
+		ret = -ENOMEM;
+		goto err_probe;
+	}
 
 	data->client = client;
 	mutex_init(&data->lock);
 
 	chip_id = i2c_smbus_read_byte_data(client, DAWN_BMP280_REG_ID);
-	if (chip_id < 0)
-		return chip_id;
-	if (chip_id != DAWN_BMP280_CHIP_ID)
-		return -ENODEV;
+	if (chip_id < 0) {
+		ret = chip_id;
+		goto err_probe;
+	}
+	if (chip_id != DAWN_BMP280_CHIP_ID) {
+		ret = -ENODEV;
+		goto err_probe;
+	}
 	data->chip_id = (u8)chip_id;
 
+	ret = dawn_bmp280_wait_ready(data, false);
+	if (ret)
+		goto err_probe;
+
 	ret = i2c_smbus_read_i2c_block_data(client, DAWN_BMP280_REG_CALIB,
-					    sizeof(calib_data), calib_data);
+						    sizeof(calib_data), calib_data);
 	if (ret < 0)
-		return ret;
-	if (ret != sizeof(calib_data))
-		return -EIO;
+		goto err_probe;
+	if (ret != sizeof(calib_data)) {
+		ret = -EIO;
+		goto err_probe;
+	}
 
 	data->calib.dig_t1 = get_unaligned_le16(&calib_data[0]);
 	data->calib.dig_t2 = (s16)get_unaligned_le16(&calib_data[2]);
@@ -210,16 +243,24 @@ static int dawn_bmp280_probe(struct i2c_client *client,
 	data->calib.dig_p7 = (s16)get_unaligned_le16(&calib_data[18]);
 	data->calib.dig_p8 = (s16)get_unaligned_le16(&calib_data[20]);
 	data->calib.dig_p9 = (s16)get_unaligned_le16(&calib_data[22]);
+	if (!data->calib.dig_p1) {
+		ret = -EINVAL;
+		goto err_probe;
+	}
 
 	i2c_set_clientdata(client, data);
 	ret = sysfs_create_group(&client->dev.kobj, &dawn_bmp280_attr_group);
 	if (ret)
-		return ret;
+		goto err_probe;
 
 	dev_info(&client->dev, "detected BMP280 at 0x%02x, chip ID 0x%02x\n",
 		 client->addr, data->chip_id);
 
 	return 0;
+
+err_probe:
+	dev_err(&client->dev, "probe failed: %d\n", ret);
+	return ret;
 }
 
 static int dawn_bmp280_remove(struct i2c_client *client)
