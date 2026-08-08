@@ -34,6 +34,11 @@ int main(void)
 	assert(!dawn_bmp280_compensate_press(&calib, 415148, t_fine,
 						    &pressure_q24_8));
 
+	calib.dig_p1 = 36477;
+	assert(!dawn_bmp280_compensate_press(NULL, 415148, t_fine,
+						    &pressure_q24_8));
+	assert(!dawn_bmp280_compensate_press(&calib, 415148, t_fine, NULL));
+
 	puts("BMP280 math tests passed");
 	return 0;
 }

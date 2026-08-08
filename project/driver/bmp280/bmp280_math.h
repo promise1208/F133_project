@@ -57,28 +57,29 @@ static inline bool dawn_bmp280_compensate_press(
 {
 	dawn_bmp280_s64 var1, var2, p;
 
-	if (pressure_q24_8 == 0)
+	if (calib == 0 || pressure_q24_8 == 0)
 		return false;
 
 	var1 = (dawn_bmp280_s64)t_fine - 128000;
 	var2 = var1 * var1 * (dawn_bmp280_s64)calib->dig_p6;
-	var2 += (var1 * (dawn_bmp280_s64)calib->dig_p5) << 17;
-	var2 += ((dawn_bmp280_s64)calib->dig_p4) << 35;
+	var2 += (var1 * (dawn_bmp280_s64)calib->dig_p5) * 131072;
+	var2 += (dawn_bmp280_s64)calib->dig_p4 * 34359738368;
 	var1 = ((var1 * var1 * (dawn_bmp280_s64)calib->dig_p3) >> 8) +
-		((var1 * (dawn_bmp280_s64)calib->dig_p2) << 12);
+		((var1 * (dawn_bmp280_s64)calib->dig_p2) * 4096);
 	var1 = ((((dawn_bmp280_s64)1 << 47) + var1) *
 		(dawn_bmp280_s64)calib->dig_p1) >> 33;
 
 	if (var1 == 0)
 		return false;
 
-	p = ((((dawn_bmp280_s64)1048576 - adc_press) << 31) - var2) * 3125;
+	p = ((((dawn_bmp280_s64)1048576 - adc_press) * 2147483648) - var2) *
+		3125;
 	p /= var1;
 	var1 = ((dawn_bmp280_s64)calib->dig_p9 * (p >> 13) *
 		(p >> 13)) >> 25;
 	var2 = ((dawn_bmp280_s64)calib->dig_p8 * p) >> 19;
 	p = ((p + var1 + var2) >> 8) +
-		((dawn_bmp280_s64)calib->dig_p7 << 4);
+		((dawn_bmp280_s64)calib->dig_p7 * 16);
 
 	if (p < 0 || p > (dawn_bmp280_s64)0xffffffff)
 		return false;
