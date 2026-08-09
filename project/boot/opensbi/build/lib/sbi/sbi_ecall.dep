@@ -1,0 +1,8 @@
+/home/user/project/D1_ALL_SDK/source/opensbi/build/lib/sbi/sbi_ecall.o: \
+ /home/user/project/D1_ALL_SDK/source/opensbi/lib/sbi/sbi_ecall.c \
+ /home/user/project/D1_ALL_SDK/source/opensbi/include/sbi/sbi_ecall.h \
+ /home/user/project/D1_ALL_SDK/source/opensbi/include/sbi/sbi_types.h \
+ /home/user/project/D1_ALL_SDK/source/opensbi/include/sbi/sbi_list.h \
+ /home/user/project/D1_ALL_SDK/source/opensbi/include/sbi/sbi_ecall_interface.h \
+ /home/user/project/D1_ALL_SDK/source/opensbi/include/sbi/sbi_error.h \
+ /home/user/project/D1_ALL_SDK/source/opensbi/include/sbi/sbi_trap.h

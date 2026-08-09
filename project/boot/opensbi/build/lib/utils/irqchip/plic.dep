@@ -1,0 +1,13 @@
+/home/user/project/D1_ALL_SDK/source/opensbi/build/lib/utils/irqchip/plic.o: \
+ /home/user/project/D1_ALL_SDK/source/opensbi/lib/utils/irqchip/plic.c \
+ /home/user/project/D1_ALL_SDK/source/opensbi/include/sbi/riscv_io.h \
+ /home/user/project/D1_ALL_SDK/source/opensbi/include/sbi/riscv_barrier.h \
+ /home/user/project/D1_ALL_SDK/source/opensbi/include/sbi/sbi_types.h \
+ /home/user/project/D1_ALL_SDK/source/opensbi/include/sbi/riscv_encoding.h \
+ /home/user/project/D1_ALL_SDK/source/opensbi/include/sbi/sbi_const.h \
+ /home/user/project/D1_ALL_SDK/source/opensbi/include/sbi/sbi_console.h \
+ /home/user/project/D1_ALL_SDK/source/opensbi/include/sbi/sbi_string.h \
+ /home/user/project/D1_ALL_SDK/source/opensbi/include/sbi_utils/irqchip/plic.h \
+ /home/user/project/D1_ALL_SDK/source/opensbi/lib/utils/libfdt/libfdt.h \
+ /home/user/project/D1_ALL_SDK/source/opensbi/lib/utils/libfdt/libfdt_env.h \
+ /home/user/project/D1_ALL_SDK/source/opensbi/lib/utils/libfdt/fdt.h

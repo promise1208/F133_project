@@ -1,0 +1,9 @@
+/home/user/project/D1_ALL_SDK/source/opensbi/build/lib/utils/libfdt/fdt_ro.o: \
+ /home/user/project/D1_ALL_SDK/source/opensbi/lib/utils/libfdt/fdt_ro.c \
+ /home/user/project/D1_ALL_SDK/source/opensbi/lib/utils/libfdt/libfdt_env.h \
+ /home/user/project/D1_ALL_SDK/source/opensbi/include/sbi/sbi_string.h \
+ /home/user/project/D1_ALL_SDK/source/opensbi/include/sbi/sbi_types.h \
+ /home/user/project/D1_ALL_SDK/source/opensbi/lib/utils/libfdt/fdt.h \
+ /home/user/project/D1_ALL_SDK/source/opensbi/lib/utils/libfdt/libfdt.h \
+ /home/user/project/D1_ALL_SDK/source/opensbi/lib/utils/libfdt/libfdt_env.h \
+ /home/user/project/D1_ALL_SDK/source/opensbi/lib/utils/libfdt/libfdt_internal.h

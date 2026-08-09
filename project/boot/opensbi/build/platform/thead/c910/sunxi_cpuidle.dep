@@ -1,0 +1,3 @@
+/home/user/project/D1_ALL_SDK/source/opensbi/build/platform/thead/c910/sunxi_cpuidle.o: \
+ /home/user/project/D1_ALL_SDK/source/opensbi/platform/thead/c910/sunxi_cpuidle.S \
+ /home/user/project/D1_ALL_SDK/source/opensbi/platform/thead/c910/sunxi_cpuidle.h

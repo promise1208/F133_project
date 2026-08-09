@@ -1,0 +1,23 @@
+/home/user/project/D1_ALL_SDK/source/opensbi/build/platform/thead/c910/sunxi_platform.o: \
+ /home/user/project/D1_ALL_SDK/source/opensbi/platform/thead/c910/sunxi_platform.c \
+ /home/user/project/D1_ALL_SDK/source/opensbi/include/sbi/riscv_encoding.h \
+ /home/user/project/D1_ALL_SDK/source/opensbi/include/sbi/sbi_const.h \
+ /home/user/project/D1_ALL_SDK/source/opensbi/include/sbi/riscv_io.h \
+ /home/user/project/D1_ALL_SDK/source/opensbi/include/sbi/riscv_barrier.h \
+ /home/user/project/D1_ALL_SDK/source/opensbi/include/sbi/sbi_types.h \
+ /home/user/project/D1_ALL_SDK/source/opensbi/include/sbi/sbi_hart.h \
+ /home/user/project/D1_ALL_SDK/source/opensbi/include/sbi/sbi_platform.h \
+ /home/user/project/D1_ALL_SDK/source/opensbi/include/sbi/sbi_ecall.h \
+ /home/user/project/D1_ALL_SDK/source/opensbi/include/sbi/sbi_list.h \
+ /home/user/project/D1_ALL_SDK/source/opensbi/include/sbi/sbi_error.h \
+ /home/user/project/D1_ALL_SDK/source/opensbi/include/sbi/sbi_scratch.h \
+ /home/user/project/D1_ALL_SDK/source/opensbi/include/sbi/riscv_asm.h \
+ /home/user/project/D1_ALL_SDK/source/opensbi/include/sbi/sbi_trap.h \
+ /home/user/project/D1_ALL_SDK/source/opensbi/include/sbi/sbi_version.h \
+ /home/user/project/D1_ALL_SDK/source/opensbi/include/sbi/sbi_console.h \
+ /home/user/project/D1_ALL_SDK/source/opensbi/include/sbi_utils/irqchip/plic.h \
+ /home/user/project/D1_ALL_SDK/source/opensbi/include/sbi_utils/sys/clint.h \
+ /home/user/project/D1_ALL_SDK/source/opensbi/include/sbi_utils/serial/sunxi-uart.h \
+ /home/user/project/D1_ALL_SDK/source/opensbi/platform/thead/c910/sunxi_platform.h \
+ /home/user/project/D1_ALL_SDK/source/opensbi/platform/thead/c910/private_opensbi.h \
+ /home/user/project/D1_ALL_SDK/source/opensbi/include/sbi/sbi_ecall_interface.h

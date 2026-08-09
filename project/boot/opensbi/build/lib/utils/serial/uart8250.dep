@@ -1,0 +1,6 @@
+/home/user/project/D1_ALL_SDK/source/opensbi/build/lib/utils/serial/uart8250.o: \
+ /home/user/project/D1_ALL_SDK/source/opensbi/lib/utils/serial/uart8250.c \
+ /home/user/project/D1_ALL_SDK/source/opensbi/include/sbi/riscv_io.h \
+ /home/user/project/D1_ALL_SDK/source/opensbi/include/sbi/riscv_barrier.h \
+ /home/user/project/D1_ALL_SDK/source/opensbi/include/sbi/sbi_types.h \
+ /home/user/project/D1_ALL_SDK/source/opensbi/include/sbi_utils/serial/uart8250.h

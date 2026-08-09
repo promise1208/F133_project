@@ -1,0 +1,7 @@
+/home/user/project/D1_ALL_SDK/source/opensbi/build/lib/sbi/sbi_fifo.o: \
+ /home/user/project/D1_ALL_SDK/source/opensbi/lib/sbi/sbi_fifo.c \
+ /home/user/project/D1_ALL_SDK/source/opensbi/include/sbi/riscv_locks.h \
+ /home/user/project/D1_ALL_SDK/source/opensbi/include/sbi/sbi_error.h \
+ /home/user/project/D1_ALL_SDK/source/opensbi/include/sbi/sbi_fifo.h \
+ /home/user/project/D1_ALL_SDK/source/opensbi/include/sbi/sbi_types.h \
+ /home/user/project/D1_ALL_SDK/source/opensbi/include/sbi/sbi_string.h

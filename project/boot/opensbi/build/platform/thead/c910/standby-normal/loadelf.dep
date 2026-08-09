@@ -1,0 +1,8 @@
+/home/user/project/D1_ALL_SDK/source/opensbi/build/platform/thead/c910/standby-normal/loadelf.o: \
+ /home/user/project/D1_ALL_SDK/source/opensbi/platform/thead/c910/standby-normal/loadelf.c \
+ /home/user/project/D1_ALL_SDK/source/opensbi/include/sbi/sbi_console.h \
+ /home/user/project/D1_ALL_SDK/source/opensbi/include/sbi/sbi_types.h \
+ /home/user/project/D1_ALL_SDK/source/opensbi/include/sbi/riscv_asm.h \
+ /home/user/project/D1_ALL_SDK/source/opensbi/include/sbi/riscv_encoding.h \
+ /home/user/project/D1_ALL_SDK/source/opensbi/include/sbi/sbi_const.h \
+ /home/user/project/D1_ALL_SDK/source/opensbi/platform/thead/c910/standby-normal/../sunxi_platform.h

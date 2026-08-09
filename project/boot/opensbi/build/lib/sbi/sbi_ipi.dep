@@ -1,0 +1,19 @@
+/home/user/project/D1_ALL_SDK/source/opensbi/build/lib/sbi/sbi_ipi.o: /home/user/project/D1_ALL_SDK/source/opensbi/lib/sbi/sbi_ipi.c \
+ /home/user/project/D1_ALL_SDK/source/opensbi/include/sbi/riscv_asm.h \
+ /home/user/project/D1_ALL_SDK/source/opensbi/include/sbi/riscv_encoding.h \
+ /home/user/project/D1_ALL_SDK/source/opensbi/include/sbi/sbi_const.h \
+ /home/user/project/D1_ALL_SDK/source/opensbi/include/sbi/riscv_atomic.h \
+ /home/user/project/D1_ALL_SDK/source/opensbi/include/sbi/riscv_barrier.h \
+ /home/user/project/D1_ALL_SDK/source/opensbi/include/sbi/sbi_bitops.h \
+ /home/user/project/D1_ALL_SDK/source/opensbi/include/sbi/sbi_bits.h \
+ /home/user/project/D1_ALL_SDK/source/opensbi/include/sbi/sbi_error.h \
+ /home/user/project/D1_ALL_SDK/source/opensbi/include/sbi/sbi_hart.h \
+ /home/user/project/D1_ALL_SDK/source/opensbi/include/sbi/sbi_types.h \
+ /home/user/project/D1_ALL_SDK/source/opensbi/include/sbi/sbi_init.h \
+ /home/user/project/D1_ALL_SDK/source/opensbi/include/sbi/sbi_ipi.h \
+ /home/user/project/D1_ALL_SDK/source/opensbi/include/sbi/sbi_platform.h \
+ /home/user/project/D1_ALL_SDK/source/opensbi/include/sbi/sbi_ecall.h \
+ /home/user/project/D1_ALL_SDK/source/opensbi/include/sbi/sbi_list.h \
+ /home/user/project/D1_ALL_SDK/source/opensbi/include/sbi/sbi_scratch.h \
+ /home/user/project/D1_ALL_SDK/source/opensbi/include/sbi/sbi_trap.h \
+ /home/user/project/D1_ALL_SDK/source/opensbi/include/sbi/sbi_version.h

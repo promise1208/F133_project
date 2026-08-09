@@ -1,0 +1,9 @@
+/home/user/project/D1_ALL_SDK/source/opensbi/build/platform/thead/c910/firmware/fw_jump.o: \
+ /home/user/project/D1_ALL_SDK/source/opensbi/firmware/fw_jump.S \
+ /home/user/project/D1_ALL_SDK/source/opensbi/firmware/fw_base.S \
+ /home/user/project/D1_ALL_SDK/source/opensbi/include/sbi/riscv_asm.h \
+ /home/user/project/D1_ALL_SDK/source/opensbi/include/sbi/riscv_encoding.h \
+ /home/user/project/D1_ALL_SDK/source/opensbi/include/sbi/sbi_const.h \
+ /home/user/project/D1_ALL_SDK/source/opensbi/include/sbi/sbi_platform.h \
+ /home/user/project/D1_ALL_SDK/source/opensbi/include/sbi/sbi_scratch.h \
+ /home/user/project/D1_ALL_SDK/source/opensbi/include/sbi/sbi_trap.h

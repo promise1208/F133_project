@@ -1,0 +1,66 @@
+/dts-v1/;
+
+/ {
+	#address-cells = <0x02>;
+	#size-cells = <0x02>;
+	compatible = "riscv-virtio";
+	model = "riscv-virtio,qemu";
+
+	fw-cfg@10100000 {
+		dma-coherent;
+		reg = <0x00 0x10100000 0x00 0x18>;
+		compatible = "qemu,fw-cfg-mmio";
+	};
+
+	chosen {
+		bootargs = "earlycon=sbi console=ttyS0";
+		stdout-path = "/soc/uart@2500000";
+	};
+
+	memory@80000000 {
+		device_type = "memory";
+		reg = <0x00 0x40000000 0x00 0x3a00000>;
+	};
+
+	cpus {
+		#address-cells = <0x01>;
+		#size-cells = <0x00>;
+		timebase-frequency = <0x16e3600>;
+
+		cpu@0 {
+			phandle = <0x03>;
+			device_type = "cpu";
+			reg = <0x00>;
+			status = "okay";
+			compatible = "riscv";
+			riscv,isa = "rv64imafdcsu";
+			mmu-type = "riscv,sv48";
+
+			interrupt-controller {
+				#interrupt-cells = <0x01>;
+				interrupt-controller;
+				compatible = "riscv,cpu-intc";
+				phandle = <0x04>;
+			};
+		};
+
+	};
+
+	soc {
+		#address-cells = <0x02>;
+		#size-cells = <0x02>;
+		compatible = "simple-bus";
+		ranges;
+
+		uart@2500000 {
+			reg = <0x00 0x02500000 0x00 0x100>;
+			compatible = "dawn,uart0";
+		};
+
+		mmc@0x04020000 {
+			reg = <0x00 0x04020000 0x00 0x1000>;
+			compatible = "allwinner,sun20i-d1-mmc";
+		};
+
+	};
+};

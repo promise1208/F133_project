@@ -1,0 +1,4 @@
+/home/user/project/D1_ALL_SDK/source/opensbi/build/lib/utils/sys/htif.o: /home/user/project/D1_ALL_SDK/source/opensbi/lib/utils/sys/htif.c \
+ /home/user/project/D1_ALL_SDK/source/opensbi/include/sbi/riscv_locks.h \
+ /home/user/project/D1_ALL_SDK/source/opensbi/include/sbi_utils/sys/htif.h \
+ /home/user/project/D1_ALL_SDK/source/opensbi/include/sbi/sbi_types.h

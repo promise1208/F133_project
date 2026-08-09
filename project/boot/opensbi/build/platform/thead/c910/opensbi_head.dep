@@ -1,0 +1,3 @@
+/home/user/project/D1_ALL_SDK/source/opensbi/build/platform/thead/c910/opensbi_head.o: \
+ /home/user/project/D1_ALL_SDK/source/opensbi/platform/thead/c910/opensbi_head.c \
+ /home/user/project/D1_ALL_SDK/source/opensbi/platform/thead/c910/private_opensbi.h

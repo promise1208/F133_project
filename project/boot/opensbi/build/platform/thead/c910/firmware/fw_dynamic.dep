@@ -1,0 +1,10 @@
+/home/user/project/D1_ALL_SDK/source/opensbi/build/platform/thead/c910/firmware/fw_dynamic.o: \
+ /home/user/project/D1_ALL_SDK/source/opensbi/firmware/fw_dynamic.S \
+ /home/user/project/D1_ALL_SDK/source/opensbi/include/sbi/fw_dynamic.h \
+ /home/user/project/D1_ALL_SDK/source/opensbi/include/sbi/riscv_asm.h \
+ /home/user/project/D1_ALL_SDK/source/opensbi/include/sbi/riscv_encoding.h \
+ /home/user/project/D1_ALL_SDK/source/opensbi/include/sbi/sbi_const.h \
+ /home/user/project/D1_ALL_SDK/source/opensbi/firmware/fw_base.S \
+ /home/user/project/D1_ALL_SDK/source/opensbi/include/sbi/sbi_platform.h \
+ /home/user/project/D1_ALL_SDK/source/opensbi/include/sbi/sbi_scratch.h \
+ /home/user/project/D1_ALL_SDK/source/opensbi/include/sbi/sbi_trap.h

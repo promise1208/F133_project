@@ -1,0 +1,15 @@
+/home/user/project/D1_ALL_SDK/source/opensbi/build/lib/sbi/sbi_ecall_legacy.o: \
+ /home/user/project/D1_ALL_SDK/source/opensbi/lib/sbi/sbi_ecall_legacy.c \
+ /home/user/project/D1_ALL_SDK/source/opensbi/include/sbi/sbi_console.h \
+ /home/user/project/D1_ALL_SDK/source/opensbi/include/sbi/sbi_types.h \
+ /home/user/project/D1_ALL_SDK/source/opensbi/include/sbi/sbi_ecall.h \
+ /home/user/project/D1_ALL_SDK/source/opensbi/include/sbi/sbi_list.h \
+ /home/user/project/D1_ALL_SDK/source/opensbi/include/sbi/sbi_ecall_interface.h \
+ /home/user/project/D1_ALL_SDK/source/opensbi/include/sbi/sbi_error.h \
+ /home/user/project/D1_ALL_SDK/source/opensbi/include/sbi/sbi_ipi.h \
+ /home/user/project/D1_ALL_SDK/source/opensbi/include/sbi/sbi_system.h \
+ /home/user/project/D1_ALL_SDK/source/opensbi/include/sbi/sbi_timer.h \
+ /home/user/project/D1_ALL_SDK/source/opensbi/include/sbi/sbi_tlb.h \
+ /home/user/project/D1_ALL_SDK/source/opensbi/include/sbi/sbi_trap.h \
+ /home/user/project/D1_ALL_SDK/source/opensbi/include/sbi/sbi_unpriv.h \
+ /home/user/project/D1_ALL_SDK/source/opensbi/include/sbi/sbi_hart.h
