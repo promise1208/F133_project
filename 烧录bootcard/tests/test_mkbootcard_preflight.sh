@@ -10,8 +10,11 @@ DEPLOY_DIR="$TMP_DIR/deploy"
 ROOTFS="$DEPLOY_DIR/dawn_d1s_rootfs"
 ROOTFS_REAL="$DEPLOY_DIR/rootfs-real"
 MODULE="$ROOTFS/lib/modules/5.4.61/extra/dawn_bmp280.ko"
+INIT="$ROOTFS/sbin/init"
+MODULE_REAL="$ROOTFS_REAL/lib/modules/5.4.61/extra/dawn_bmp280-real.ko"
 FIND_SHIM_DIR="$TMP_DIR/find-shim"
-mkdir -p "$ROOTFS_REAL/sbin" "$ROOTFS_REAL/lib/modules/5.4.61/extra"
+mkdir -p "$ROOTFS_REAL/bin" "$ROOTFS_REAL/sbin" \
+	"$ROOTFS_REAL/lib/modules/5.4.61/extra"
 ln -s "rootfs-real" "$ROOTFS"
 cp "$BURN_DIR/mkbootcard" "$DEPLOY_DIR/mkbootcard"
 cp "$BURN_DIR/dawn_bmp280.ko" "$DEPLOY_DIR/dawn_bmp280.ko"
@@ -47,6 +50,22 @@ write_elf_placeholder "$ROOTFS_REAL/lib/libc-2.29.so"
 ln -s "libc-2.29.so" "$ROOTFS_REAL/lib/libc.so.6"
 
 run_preflight
+
+write_elf_placeholder "$ROOTFS_REAL/bin/init-real"
+cp "$BURN_DIR/dawn_bmp280.ko" "$MODULE_REAL"
+rm "$INIT"
+ln -s "/bin/init-real" "$INIT"
+rm "$MODULE"
+ln -s "/lib/modules/5.4.61/extra/dawn_bmp280-real.ko" "$MODULE"
+if ! run_preflight >"$TMP_DIR/absolute-target.out" 2>&1; then
+	cat "$TMP_DIR/absolute-target.out" >&2
+	echo "FAIL: rootfs absolute target links were rejected" >&2
+	exit 1
+fi
+rm "$INIT"
+write_elf_placeholder "$ROOTFS_REAL/sbin/init"
+rm "$MODULE"
+cp "$BURN_DIR/dawn_bmp280.ko" "$MODULE"
 
 mkdir -p "$FIND_SHIM_DIR"
 printf '#!/bin/bash\nexit 42\n' > "$FIND_SHIM_DIR/find"
@@ -101,7 +120,6 @@ grep -F "$ROOTFS/lib/libabsolute.so" "$TMP_DIR/absolute-symlink.out"
 grep -F "broken symlink" "$TMP_DIR/absolute-symlink.out"
 rm "$ROOTFS/lib/libabsolute.so"
 
-INIT="$ROOTFS/sbin/init"
 if [[ ! -e "/bin/sh" || -e "$ROOTFS_REAL/bin/sh" ]]; then
 	echo "FAIL: required init escape fixture is invalid" >&2
 	exit 1
@@ -113,7 +131,7 @@ if run_preflight >"$TMP_DIR/init-escape.out" 2>&1; then
 	exit 1
 fi
 grep -F "$INIT" "$TMP_DIR/init-escape.out"
-grep -F "escapes rootfs" "$TMP_DIR/init-escape.out"
+grep -E "escapes rootfs|missing" "$TMP_DIR/init-escape.out"
 rm "$INIT"
 write_elf_placeholder "$ROOTFS_REAL/sbin/init"
 
@@ -124,7 +142,7 @@ if run_preflight >"$TMP_DIR/module-escape.out" 2>&1; then
 	exit 1
 fi
 grep -F "$MODULE" "$TMP_DIR/module-escape.out"
-grep -F "escapes rootfs" "$TMP_DIR/module-escape.out"
+grep -E "escapes rootfs|missing" "$TMP_DIR/module-escape.out"
 rm "$MODULE"
 cp "$BURN_DIR/dawn_bmp280.ko" "$MODULE"
 

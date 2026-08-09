@@ -13,6 +13,8 @@ DTB="$SCRIPT_DIR/dawn_d1s.dtb"
 ROOTFS="$SCRIPT_DIR/dawn_d1s_rootfs"
 MODULE="$ROOTFS/lib/modules/$KERNEL_RELEASE/extra/dawn_bmp280.ko"
 ROOTFS_REAL=
+ROOTFS_RESOLVED=
+RESOLVED_MODULE=
 SCAN_DIR=
 
 cleanup()
@@ -44,34 +46,64 @@ require_file()
 require_elf()
 {
 	local path=$1
+	local report_path=${2:-$path}
 	local magic
 
 	if [[ ! -f "$path" ]]; then
-		die "$path: missing"
+		die "$report_path: missing"
 	fi
 
 	magic="$(od -An -tx1 -N4 "$path" | tr -d '[:space:]')"
 	if [[ "$magic" != "7f454c46" ]]; then
-		die "$path: invalid ELF magic"
+		die "$report_path: invalid ELF magic"
+	fi
+}
+
+resolve_rootfs_leaf()
+{
+	local path=$1
+	local link_target
+	local containing_dir
+	local mapped_path
+
+	if [[ -L "$path" ]]; then
+		if ! link_target="$(readlink -- "$path")"; then
+			die "$path: unable to read symlink"
+		fi
+		if [[ "$link_target" == /* ]]; then
+			mapped_path="$ROOTFS_REAL$link_target"
+		else
+			if ! containing_dir="$(readlink -f -- "$(dirname -- \
+				"$path")")"; then
+				die "$path: unable to resolve containing directory"
+			fi
+			mapped_path="$containing_dir/$link_target"
+		fi
+	else
+		mapped_path=$path
+	fi
+
+	if ! ROOTFS_RESOLVED="$(readlink -m -- "$mapped_path")"; then
+		die "$path: unable to resolve rootfs path"
+	fi
+	if [[ "$ROOTFS_RESOLVED" != "$ROOTFS_REAL" && \
+		"$ROOTFS_RESOLVED" != "$ROOTFS_REAL/"* ]]; then
+		die "$path: escapes rootfs"
 	fi
 }
 
 require_rootfs_elf()
 {
 	local path=$1
-	local resolved_path
 
-	if ! resolved_path="$(readlink -m -- "$path")"; then
-		die "$path: unable to resolve rootfs path"
-	fi
-	if [[ "$resolved_path" != "$ROOTFS_REAL" && \
-		"$resolved_path" != "$ROOTFS_REAL/"* ]]; then
-		die "$path: escapes rootfs"
-	fi
-	if [[ ! -f "$path" ]]; then
+	resolve_rootfs_leaf "$path"
+	if [[ ! -f "$ROOTFS_RESOLVED" ]]; then
 		die "$path: missing"
 	fi
-	require_elf "$path"
+	if [[ ! -s "$ROOTFS_RESOLVED" ]]; then
+		die "$path: empty"
+	fi
+	require_elf "$ROOTFS_RESOLVED" "$path"
 }
 
 preflight()
@@ -114,6 +146,7 @@ preflight()
 	require_rootfs_elf "$ROOTFS/lib/ld-2.29.so"
 	require_rootfs_elf "$ROOTFS/lib/libc-2.29.so"
 	require_rootfs_elf "$MODULE"
+	RESOLVED_MODULE=$ROOTFS_RESOLVED
 
 	if ! SCAN_DIR="$(mktemp -d '/tmp/mkbootcard-scan.XXXXXX')"; then
 		die "unable to create scan directory"
@@ -152,14 +185,14 @@ preflight()
 		require_elf "$library"
 	done < "$SCAN_DIR/lib-files"
 
-	if ! vermagic="$(modinfo -F vermagic "$MODULE" 2>/dev/null)"; then
+	if ! vermagic="$(modinfo -F vermagic "$RESOLVED_MODULE" 2>/dev/null)"; then
 		die "$MODULE: modinfo failed"
 	fi
 	if [[ "$vermagic" != "$KERNEL_RELEASE "* ]]; then
 		die "$MODULE: invalid vermagic"
 	fi
 
-	if ! aliases="$(modinfo -F alias "$MODULE" 2>/dev/null)"; then
+	if ! aliases="$(modinfo -F alias "$RESOLVED_MODULE" 2>/dev/null)"; then
 		die "$MODULE: modinfo failed"
 	fi
 	alias_found=false
