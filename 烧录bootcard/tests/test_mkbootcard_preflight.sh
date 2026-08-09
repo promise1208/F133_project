@@ -4,6 +4,7 @@ set -euo pipefail
 TEST_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 BURN_DIR=$(cd "$TEST_DIR/.." && pwd)
 TMP_DIR=$(mktemp -d '/tmp/f133-mkbootcard-test.XXXXXX')
+ORIGINAL_PATH=$PATH
 trap 'rm -rf -- "$TMP_DIR"' EXIT
 
 DEPLOY_DIR="$TMP_DIR/deploy"
@@ -13,6 +14,7 @@ MODULE="$ROOTFS/lib/modules/5.4.61/extra/dawn_bmp280.ko"
 INIT="$ROOTFS/sbin/init"
 MODULE_REAL="$ROOTFS_REAL/lib/modules/5.4.61/extra/dawn_bmp280-real.ko"
 FIND_SHIM_DIR="$TMP_DIR/find-shim"
+FLASH_PATH_DIR="$TMP_DIR/flash-path"
 mkdir -p "$ROOTFS_REAL/bin" "$ROOTFS_REAL/sbin" \
 	"$ROOTFS_REAL/lib/modules/5.4.61/extra"
 ln -s "rootfs-real" "$ROOTFS"
@@ -50,6 +52,54 @@ write_elf_placeholder "$ROOTFS_REAL/lib/libc-2.29.so"
 ln -s "libc-2.29.so" "$ROOTFS_REAL/lib/libc.so.6"
 
 run_preflight
+
+mkdir -p "$FLASH_PATH_DIR"
+for command_name in dirname find mktemp modinfo od readlink rm tr \
+	cp dd lsblk mkfs.ext4 sync udevadm; do
+	if ! command_path="$(PATH="$ORIGINAL_PATH" command -v \
+		"$command_name")"; then
+		echo "FAIL: missing test command $command_name" >&2
+		exit 1
+	fi
+	ln -s "$command_path" "$FLASH_PATH_DIR/$command_name"
+done
+if ! (
+	cd "$TMP_DIR"
+	PATH="$FLASH_PATH_DIR" "$DEPLOY_DIR/mkbootcard" --check-only
+) >"$TMP_DIR/check-only-tools.out" 2>&1; then
+	cat "$TMP_DIR/check-only-tools.out" >&2
+	echo "FAIL: check-only required flash tools" >&2
+	exit 1
+fi
+if (
+	cd "$TMP_DIR"
+	PATH="$FLASH_PATH_DIR" "$DEPLOY_DIR/mkbootcard" /dev/null
+) >"$TMP_DIR/flash-tools.out" 2>&1; then
+	echo "FAIL: normal mode passed without fdisk" >&2
+	exit 1
+fi
+if ! grep -F "fdisk: missing command" "$TMP_DIR/flash-tools.out"; then
+	cat "$TMP_DIR/flash-tools.out" >&2
+	echo "FAIL: missing fdisk was not rejected before target validation" >&2
+	exit 1
+fi
+if [[ -e "$ROOTFS/Image" || -e "$ROOTFS/dawn_d1s.dtb" ]]; then
+	echo "FAIL: normal mode copied rootfs boot files" >&2
+	exit 1
+fi
+
+ROOTFS_IMAGE="$ROOTFS/Image"
+OUTSIDE_IMAGE="$TMP_DIR/outside-image"
+printf 'harmless destination\n' > "$OUTSIDE_IMAGE"
+ln -s "$OUTSIDE_IMAGE" "$ROOTFS_IMAGE"
+if run_preflight >"$TMP_DIR/image-destination.out" 2>&1; then
+	echo "FAIL: rootfs Image destination symlink passed preflight" >&2
+	exit 1
+fi
+grep -F "$ROOTFS_IMAGE" "$TMP_DIR/image-destination.out"
+grep -F "destination must not be symlink" \
+	"$TMP_DIR/image-destination.out"
+rm "$ROOTFS_IMAGE"
 
 write_elf_placeholder "$ROOTFS_REAL/bin/init-real"
 cp "$BURN_DIR/dawn_bmp280.ko" "$MODULE_REAL"

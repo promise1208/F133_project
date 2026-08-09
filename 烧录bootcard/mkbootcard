@@ -43,6 +43,17 @@ require_file()
 	fi
 }
 
+require_flash_tools()
+{
+	local tool
+
+	for tool in cp dd fdisk lsblk mkfs.ext4 readlink sync udevadm; do
+		if ! command -v "$tool" >/dev/null 2>&1; then
+			die "$tool: missing command"
+		fi
+	done
+}
+
 require_elf()
 {
 	local path=$1
@@ -109,6 +120,7 @@ require_rootfs_elf()
 preflight()
 {
 	local library
+	local destination
 	local aliases
 	local vermagic
 	local module_alias
@@ -139,6 +151,11 @@ preflight()
 		"$ROOTFS_REAL/lib/modules/$KERNEL_RELEASE/extra"; do
 		if [[ ! -d "$library" || -L "$library" ]]; then
 			die "$library: missing directory"
+		fi
+	done
+	for destination in "$ROOTFS/Image" "$ROOTFS/dawn_d1s.dtb"; do
+		if [[ -L "$destination" ]]; then
+			die "$destination: destination must not be symlink"
 		fi
 	done
 
@@ -224,6 +241,7 @@ fi
 
 TARGET="$1"
 preflight
+require_flash_tools
 
 if ! SD_DEV="$(readlink -f -- "$TARGET")"; then
 	die "$TARGET: unable to canonicalize target"
