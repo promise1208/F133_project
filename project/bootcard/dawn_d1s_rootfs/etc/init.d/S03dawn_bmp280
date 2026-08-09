@@ -1,0 +1,49 @@
+#!/bin/sh
+#
+# Load the dawn BMP280 pressure sensor driver.
+#
+
+MODULE=/lib/modules/5.4.61/extra/dawn_bmp280.ko
+
+start() {
+	printf "Loading dawn_bmp280 driver: "
+	if lsmod 2>/dev/null | grep -q '^dawn_bmp280'; then
+		echo "already loaded"
+	elif insmod "$MODULE"; then
+		echo "OK"
+	else
+		echo "FAIL"
+		return 1
+	fi
+}
+
+stop() {
+	printf "Unloading dawn_bmp280 driver: "
+	if lsmod 2>/dev/null | grep -q '^dawn_bmp280'; then
+		rmmod dawn_bmp280 && echo "OK" || echo "FAIL"
+	else
+		echo "not loaded"
+	fi
+}
+
+restart() {
+	stop
+	start
+}
+
+case "$1" in
+  start)
+	start
+	;;
+  stop)
+	stop
+	;;
+  restart|reload)
+	restart
+	;;
+  *)
+	echo "Usage: $0 {start|stop|restart}"
+	exit 1
+esac
+
+exit $?

@@ -1,0 +1,21 @@
+#!/bin/sh
+
+NET=wlan0
+case "$1" in
+  start)
+        /usr/sbin/wpa_supplicant -D nl80211 -i $NET -c /etc/wpa_supplicant.conf -B
+        sleep 3
+
+        ;;
+  stop)
+        ;;
+  restart|reload)
+        ;;
+  *)
+        echo "Usage: $0 {start|stop|restart}"
+        exit 1
+esac
+
+exit $?
+
+

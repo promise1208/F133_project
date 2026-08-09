@@ -1,0 +1,4 @@
+# Aliases extracted from modules themselves.
+alias of:N*T*Cdawn,bmp280C* dawn_bmp280
+alias of:N*T*Cdawn,bmp280 dawn_bmp280
+alias i2c:dawn_bmp280 dawn_bmp280
