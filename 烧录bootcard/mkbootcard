@@ -12,11 +12,14 @@ KERNEL="$SCRIPT_DIR/Image"
 DTB="$SCRIPT_DIR/dawn_d1s.dtb"
 ROOTFS="$SCRIPT_DIR/dawn_d1s_rootfs"
 MODULE="$ROOTFS/lib/modules/$KERNEL_RELEASE/extra/dawn_bmp280.ko"
-SCAN_DIR="$(mktemp -d '/tmp/mkbootcard-scan.XXXXXX')"
+ROOTFS_REAL=
+SCAN_DIR=
 
 cleanup()
 {
-	rm -rf -- "$SCAN_DIR"
+	if [[ -n "$SCAN_DIR" && -d "$SCAN_DIR" ]]; then
+		rm -rf -- "$SCAN_DIR"
+	fi
 }
 trap cleanup EXIT
 
@@ -53,6 +56,24 @@ require_elf()
 	fi
 }
 
+require_rootfs_elf()
+{
+	local path=$1
+	local resolved_path
+
+	if ! resolved_path="$(readlink -m -- "$path")"; then
+		die "$path: unable to resolve rootfs path"
+	fi
+	if [[ "$resolved_path" != "$ROOTFS_REAL" && \
+		"$resolved_path" != "$ROOTFS_REAL/"* ]]; then
+		die "$path: escapes rootfs"
+	fi
+	if [[ ! -f "$path" ]]; then
+		die "$path: missing"
+	fi
+	require_elf "$path"
+}
+
 preflight()
 {
 	local library
@@ -71,18 +92,32 @@ preflight()
 	require_file "$KERNEL"
 	require_file "$DTB"
 
-	for library in "$ROOTFS" "$ROOTFS/sbin" "$ROOTFS/lib" \
-		"$ROOTFS/lib/modules" \
-		"$ROOTFS/lib/modules/$KERNEL_RELEASE" \
-		"$ROOTFS/lib/modules/$KERNEL_RELEASE/extra"; do
-		if [[ ! -d "$library" ]]; then
+	if [[ ! -d "$ROOTFS" ]]; then
+		die "$ROOTFS: missing directory"
+	fi
+	if ! ROOTFS_REAL="$(readlink -f -- "$ROOTFS")"; then
+		die "$ROOTFS: unable to canonicalize rootfs"
+	fi
+	if [[ ! -d "$ROOTFS_REAL" ]]; then
+		die "$ROOTFS: missing directory"
+	fi
+	for library in "$ROOTFS_REAL/sbin" "$ROOTFS_REAL/lib" \
+		"$ROOTFS_REAL/lib/modules" \
+		"$ROOTFS_REAL/lib/modules/$KERNEL_RELEASE" \
+		"$ROOTFS_REAL/lib/modules/$KERNEL_RELEASE/extra"; do
+		if [[ ! -d "$library" || -L "$library" ]]; then
 			die "$library: missing directory"
 		fi
 	done
 
-	require_elf "$ROOTFS/sbin/init"
-	require_elf "$ROOTFS/lib/ld-2.29.so"
-	require_elf "$ROOTFS/lib/libc-2.29.so"
+	require_rootfs_elf "$ROOTFS/sbin/init"
+	require_rootfs_elf "$ROOTFS/lib/ld-2.29.so"
+	require_rootfs_elf "$ROOTFS/lib/libc-2.29.so"
+	require_rootfs_elf "$MODULE"
+
+	if ! SCAN_DIR="$(mktemp -d '/tmp/mkbootcard-scan.XXXXXX')"; then
+		die "unable to create scan directory"
+	fi
 
 	if ! find "$ROOTFS/lib" -mindepth 1 -maxdepth 1 -type l -print0 \
 		> "$SCAN_DIR/lib-symlinks"; then
@@ -93,15 +128,15 @@ preflight()
 			die "$library: unable to read symlink"
 		fi
 		if [[ "$link_target" == /* ]]; then
-			link_path="$ROOTFS$link_target"
+			link_path="$ROOTFS_REAL$link_target"
 		else
-			link_path="$(dirname -- "$library")/$link_target"
+			link_path="$ROOTFS_REAL/lib/$link_target"
 		fi
 		if ! resolved_link="$(readlink -m -- "$link_path")"; then
 			die "$library: unable to resolve symlink"
 		fi
-		if [[ "$resolved_link" != "$ROOTFS" && \
-			"$resolved_link" != "$ROOTFS/"* ]]; then
+		if [[ "$resolved_link" != "$ROOTFS_REAL" && \
+			"$resolved_link" != "$ROOTFS_REAL/"* ]]; then
 			die "$library: symlink escapes rootfs"
 		fi
 		if [[ ! -e "$resolved_link" ]]; then
@@ -116,8 +151,6 @@ preflight()
 	while IFS= read -r -d '' library; do
 		require_elf "$library"
 	done < "$SCAN_DIR/lib-files"
-
-	require_elf "$MODULE"
 
 	if ! vermagic="$(modinfo -F vermagic "$MODULE" 2>/dev/null)"; then
 		die "$MODULE: modinfo failed"
@@ -139,6 +172,11 @@ preflight()
 	if [[ "$alias_found" != true ]]; then
 		die "$MODULE: missing alias i2c:dawn_bmp280"
 	fi
+
+	if ! rm -rf -- "$SCAN_DIR"; then
+		die "$SCAN_DIR: unable to clean scan directory"
+	fi
+	SCAN_DIR=
 }
 
 if [[ "$#" -ne 1 ]]; then

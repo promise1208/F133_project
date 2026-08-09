@@ -8,12 +8,15 @@ trap 'rm -rf -- "$TMP_DIR"' EXIT
 
 DEPLOY_DIR="$TMP_DIR/deploy"
 ROOTFS="$DEPLOY_DIR/dawn_d1s_rootfs"
+ROOTFS_REAL="$DEPLOY_DIR/rootfs-real"
+MODULE="$ROOTFS/lib/modules/5.4.61/extra/dawn_bmp280.ko"
 FIND_SHIM_DIR="$TMP_DIR/find-shim"
-mkdir -p "$ROOTFS/sbin" "$ROOTFS/lib/modules/5.4.61/extra"
+mkdir -p "$ROOTFS_REAL/sbin" "$ROOTFS_REAL/lib/modules/5.4.61/extra"
+ln -s "rootfs-real" "$ROOTFS"
 cp "$BURN_DIR/mkbootcard" "$DEPLOY_DIR/mkbootcard"
 cp "$BURN_DIR/dawn_bmp280.ko" "$DEPLOY_DIR/dawn_bmp280.ko"
 cp "$BURN_DIR/dawn_bmp280.ko" \
-	"$ROOTFS/lib/modules/5.4.61/extra/dawn_bmp280.ko"
+	"$MODULE"
 
 write_artifact_placeholder()
 {
@@ -38,9 +41,10 @@ run_preflight()
 	)
 }
 
-write_elf_placeholder "$ROOTFS/sbin/init"
-write_elf_placeholder "$ROOTFS/lib/ld-2.29.so"
-write_elf_placeholder "$ROOTFS/lib/libc-2.29.so"
+write_elf_placeholder "$ROOTFS_REAL/sbin/init"
+write_elf_placeholder "$ROOTFS_REAL/lib/ld-2.29.so"
+write_elf_placeholder "$ROOTFS_REAL/lib/libc-2.29.so"
+ln -s "libc-2.29.so" "$ROOTFS_REAL/lib/libc.so.6"
 
 run_preflight
 
@@ -95,5 +99,33 @@ if run_preflight >"$TMP_DIR/absolute-symlink.out" 2>&1; then
 fi
 grep -F "$ROOTFS/lib/libabsolute.so" "$TMP_DIR/absolute-symlink.out"
 grep -F "broken symlink" "$TMP_DIR/absolute-symlink.out"
+rm "$ROOTFS/lib/libabsolute.so"
+
+INIT="$ROOTFS/sbin/init"
+if [[ ! -e "/bin/sh" || -e "$ROOTFS_REAL/bin/sh" ]]; then
+	echo "FAIL: required init escape fixture is invalid" >&2
+	exit 1
+fi
+rm "$INIT"
+ln -s "/bin/sh" "$INIT"
+if run_preflight >"$TMP_DIR/init-escape.out" 2>&1; then
+	echo "FAIL: required init escape passed preflight" >&2
+	exit 1
+fi
+grep -F "$INIT" "$TMP_DIR/init-escape.out"
+grep -F "escapes rootfs" "$TMP_DIR/init-escape.out"
+rm "$INIT"
+write_elf_placeholder "$ROOTFS_REAL/sbin/init"
+
+rm "$MODULE"
+ln -s "$BURN_DIR/dawn_bmp280.ko" "$MODULE"
+if run_preflight >"$TMP_DIR/module-escape.out" 2>&1; then
+	echo "FAIL: deployed module escape passed preflight" >&2
+	exit 1
+fi
+grep -F "$MODULE" "$TMP_DIR/module-escape.out"
+grep -F "escapes rootfs" "$TMP_DIR/module-escape.out"
+rm "$MODULE"
+cp "$BURN_DIR/dawn_bmp280.ko" "$MODULE"
 
 echo "PASS: mkbootcard preflight regression tests"
