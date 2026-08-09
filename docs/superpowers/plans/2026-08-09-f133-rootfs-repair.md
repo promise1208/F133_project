@@ -16,7 +16,10 @@
 - Modify `烧录bootcard/mkbootcard`: shared preflight, `--check-only`, fail-fast behavior, quoted paths, and delayed block-device access.
 - Replace generated deployment directory `烧录bootcard/dawn_d1s_rootfs`: freshly extracted official rootfs plus current deployment artifacts; do not add this generated tree to Git.
 - Read `系统固件/bootcard.tar.gz`: immutable official rootfs source.
-- Read `project/output/linux-Image-5.4.bin`, `project/output/dawn_d1s.dtb`, and `烧录bootcard/dawn_bmp280.ko`: current verified deployment artifacts.
+- Read `烧录bootcard/Image`, `烧录bootcard/dawn_d1s.dtb`, and
+  `烧录bootcard/dawn_bmp280.ko`: current verified deployment artifacts. The
+  similarly named `project/output` files are older builds and must not replace
+  these deployment copies.
 
 ### Task 1: Add a failing preflight regression test
 
@@ -270,8 +273,8 @@ git commit -m "fix: reject corrupt bootcard rootfs"
 **Files:**
 - Replace: `烧录bootcard/dawn_d1s_rootfs`
 - Read: `系统固件/bootcard.tar.gz`
-- Read: `project/output/linux-Image-5.4.bin`
-- Read: `project/output/dawn_d1s.dtb`
+- Read: `烧录bootcard/Image`
+- Read: `烧录bootcard/dawn_d1s.dtb`
 - Read: `烧录bootcard/dawn_bmp280.ko`
 
 - [ ] **Step 1: Record immutable source and deployment hashes**
@@ -280,12 +283,17 @@ Run:
 
 ```bash
 sha256sum 系统固件/bootcard.tar.gz \
-    project/output/linux-Image-5.4.bin \
-    project/output/dawn_d1s.dtb \
+    烧录bootcard/Image \
+    烧录bootcard/dawn_d1s.dtb \
     烧录bootcard/dawn_bmp280.ko
 ```
 
-Expected: four hashes are recorded in the execution log; the module hash remains `4ac6f5d4787ef028b57705487b7b98a54a5747b5b3815b284f477000dd334a0d`.
+Expected: four hashes are recorded in the execution log. Image remains
+`7d175e01652152ba48a504365a08fa5f213b03a77e96a2fa33af9bf35964f9c4`,
+DTB remains
+`356b63a516bdf5aa0775a7c3a47c00ab3b54b8e90088cdec412a350794c90f80`,
+and the module remains
+`4ac6f5d4787ef028b57705487b7b98a54a5747b5b3815b284f477000dd334a0d`.
 
 - [ ] **Step 2: Extract the official tree onto healthy temporary storage**
 
@@ -307,8 +315,8 @@ Expected: all three files are identified as ELF 64-bit RISC-V objects.
 Run:
 
 ```bash
-install -m 0644 project/output/linux-Image-5.4.bin "$FRESH_ROOTFS/Image"
-install -m 0644 project/output/dawn_d1s.dtb "$FRESH_ROOTFS/dawn_d1s.dtb"
+install -m 0644 烧录bootcard/Image "$FRESH_ROOTFS/Image"
+install -m 0644 烧录bootcard/dawn_d1s.dtb "$FRESH_ROOTFS/dawn_d1s.dtb"
 install -d "$FRESH_ROOTFS/lib/modules/5.4.61/extra"
 install -m 0644 烧录bootcard/dawn_bmp280.ko \
     "$FRESH_ROOTFS/lib/modules/5.4.61/extra/dawn_bmp280.ko"
