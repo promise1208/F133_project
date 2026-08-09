@@ -12,6 +12,13 @@ KERNEL="$SCRIPT_DIR/Image"
 DTB="$SCRIPT_DIR/dawn_d1s.dtb"
 ROOTFS="$SCRIPT_DIR/dawn_d1s_rootfs"
 MODULE="$ROOTFS/lib/modules/$KERNEL_RELEASE/extra/dawn_bmp280.ko"
+SCAN_DIR="$(mktemp -d '/tmp/mkbootcard-scan.XXXXXX')"
+
+cleanup()
+{
+	rm -rf -- "$SCAN_DIR"
+}
+trap cleanup EXIT
 
 die()
 {
@@ -25,6 +32,9 @@ require_file()
 
 	if [[ ! -f "$path" ]]; then
 		die "$path: missing"
+	fi
+	if [[ ! -s "$path" ]]; then
+		die "$path: empty"
 	fi
 }
 
@@ -49,6 +59,10 @@ preflight()
 	local aliases
 	local vermagic
 	local module_alias
+	local alias_found
+	local link_target
+	local link_path
+	local resolved_link
 
 	require_file "$BOOTLOADER"
 	require_file "$OPENSBI"
@@ -70,16 +84,38 @@ preflight()
 	require_elf "$ROOTFS/lib/ld-2.29.so"
 	require_elf "$ROOTFS/lib/libc-2.29.so"
 
+	if ! find "$ROOTFS/lib" -mindepth 1 -maxdepth 1 -type l -print0 \
+		> "$SCAN_DIR/lib-symlinks"; then
+		die "$ROOTFS/lib: unable to scan symlinks"
+	fi
 	while IFS= read -r -d '' library; do
-		if [[ ! -e "$library" ]]; then
+		if ! link_target="$(readlink -- "$library")"; then
+			die "$library: unable to read symlink"
+		fi
+		if [[ "$link_target" == /* ]]; then
+			link_path="$ROOTFS$link_target"
+		else
+			link_path="$(dirname -- "$library")/$link_target"
+		fi
+		if ! resolved_link="$(readlink -m -- "$link_path")"; then
+			die "$library: unable to resolve symlink"
+		fi
+		if [[ "$resolved_link" != "$ROOTFS" && \
+			"$resolved_link" != "$ROOTFS/"* ]]; then
+			die "$library: symlink escapes rootfs"
+		fi
+		if [[ ! -e "$resolved_link" ]]; then
 			die "$library: broken symlink"
 		fi
-	done < <(find "$ROOTFS/lib" -mindepth 1 -maxdepth 1 -type l -print0)
+	done < "$SCAN_DIR/lib-symlinks"
 
+	if ! find "$ROOTFS/lib" -mindepth 1 -maxdepth 1 -type f \
+		-name '*.so*' ! -name '*.py' -print0 > "$SCAN_DIR/lib-files"; then
+		die "$ROOTFS/lib: unable to scan libraries"
+	fi
 	while IFS= read -r -d '' library; do
 		require_elf "$library"
-	done < <(find "$ROOTFS/lib" -mindepth 1 -maxdepth 1 -type f \
-		-name '*.so*' ! -name '*.py' -print0)
+	done < "$SCAN_DIR/lib-files"
 
 	require_elf "$MODULE"
 
@@ -93,12 +129,16 @@ preflight()
 	if ! aliases="$(modinfo -F alias "$MODULE" 2>/dev/null)"; then
 		die "$MODULE: modinfo failed"
 	fi
+	alias_found=false
 	while IFS= read -r module_alias; do
 		if [[ "$module_alias" == "i2c:dawn_bmp280" ]]; then
-			return 0
+			alias_found=true
+			break
 		fi
 	done <<< "$aliases"
-	die "$MODULE: missing alias i2c:dawn_bmp280"
+	if [[ "$alias_found" != true ]]; then
+		die "$MODULE: missing alias i2c:dawn_bmp280"
+	fi
 }
 
 if [[ "$#" -ne 1 ]]; then
@@ -111,21 +151,24 @@ if [[ "$1" == "--check-only" ]]; then
 	exit 0
 fi
 
-SD_DEV=$1
+TARGET="$1"
 preflight
 
+if ! SD_DEV="$(readlink -f -- "$TARGET")"; then
+	die "$TARGET: unable to canonicalize target"
+fi
 if [[ ! -b "$SD_DEV" ]]; then
 	die "$SD_DEV: not a block device"
 fi
 
-if ! DEVICE_TYPE="$(lsblk -dnro TYPE "$SD_DEV")"; then
+if ! DEVICE_TYPE="$(lsblk -dnro TYPE -- "$SD_DEV")"; then
 	die "$SD_DEV: unable to query lsblk TYPE"
 fi
 if [[ "$DEVICE_TYPE" != "disk" ]]; then
 	die "$SD_DEV: lsblk TYPE is not disk"
 fi
 
-if ! REMOVABLE="$(lsblk -dnro RM "$SD_DEV")"; then
+if ! REMOVABLE="$(lsblk -dnro RM -- "$SD_DEV")"; then
 	die "$SD_DEV: unable to query lsblk RM"
 fi
 if [[ "$REMOVABLE" != "1" ]]; then
@@ -153,8 +196,33 @@ printf 'Creating partitions...\n'
 	echo 8192
 	echo
 	echo w
-) | fdisk "$SD_DEV"
+) | fdisk -- "$SD_DEV"
 sync
+
+if ! udevadm settle; then
+	die "unable to settle udev"
+fi
+if [[ ! -b "$ROOTFS_PART" ]]; then
+	die "$ROOTFS_PART: partition not found after fdisk"
+fi
+if ! PARTITION_TYPE="$(lsblk -dnro TYPE -- "$ROOTFS_PART")"; then
+	die "$ROOTFS_PART: unable to query lsblk TYPE"
+fi
+if [[ "$PARTITION_TYPE" != "part" ]]; then
+	die "$ROOTFS_PART: lsblk TYPE is not part"
+fi
+if ! PARENT_NAME="$(lsblk -dnro PKNAME -- "$ROOTFS_PART")"; then
+	die "$ROOTFS_PART: unable to query lsblk PKNAME"
+fi
+if [[ -z "$PARENT_NAME" ]]; then
+	die "$ROOTFS_PART: missing parent disk"
+fi
+if ! PARENT_DEV="$(readlink -f -- "/dev/$PARENT_NAME")"; then
+	die "$ROOTFS_PART: unable to resolve parent disk"
+fi
+if [[ "$PARENT_DEV" != "$SD_DEV" ]]; then
+	die "$ROOTFS_PART: parent is $PARENT_DEV, expected $SD_DEV"
+fi
 
 printf 'create rootfs on %s\n' "$ROOTFS_PART"
 mkfs.ext4 "$ROOTFS_PART" -L rootfs -d "$ROOTFS"
