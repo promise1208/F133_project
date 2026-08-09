@@ -1,0 +1,172 @@
+#!/bin/bash
+set -euo pipefail
+
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+KERNEL_RELEASE=5.4.61
+
+BOOTLOADER="$SCRIPT_DIR/boot0_sdcard.fex"
+OPENSBI="$SCRIPT_DIR/fw_jump.bin"
+EARLY_DTB="$SCRIPT_DIR/dawn-d1s-uboot.dtb"
+UBOOT="$SCRIPT_DIR/u-boot-nodtb.bin"
+KERNEL="$SCRIPT_DIR/Image"
+DTB="$SCRIPT_DIR/dawn_d1s.dtb"
+ROOTFS="$SCRIPT_DIR/dawn_d1s_rootfs"
+MODULE="$ROOTFS/lib/modules/$KERNEL_RELEASE/extra/dawn_bmp280.ko"
+
+die()
+{
+	printf 'Error: %s\n' "$*" >&2
+	exit 1
+}
+
+require_file()
+{
+	local path=$1
+
+	if [[ ! -f "$path" ]]; then
+		die "$path: missing"
+	fi
+}
+
+require_elf()
+{
+	local path=$1
+	local magic
+
+	if [[ ! -f "$path" ]]; then
+		die "$path: missing"
+	fi
+
+	magic="$(od -An -tx1 -N4 "$path" | tr -d '[:space:]')"
+	if [[ "$magic" != "7f454c46" ]]; then
+		die "$path: invalid ELF magic"
+	fi
+}
+
+preflight()
+{
+	local library
+	local aliases
+	local vermagic
+	local module_alias
+
+	require_file "$BOOTLOADER"
+	require_file "$OPENSBI"
+	require_file "$EARLY_DTB"
+	require_file "$UBOOT"
+	require_file "$KERNEL"
+	require_file "$DTB"
+
+	for library in "$ROOTFS" "$ROOTFS/sbin" "$ROOTFS/lib" \
+		"$ROOTFS/lib/modules" \
+		"$ROOTFS/lib/modules/$KERNEL_RELEASE" \
+		"$ROOTFS/lib/modules/$KERNEL_RELEASE/extra"; do
+		if [[ ! -d "$library" ]]; then
+			die "$library: missing directory"
+		fi
+	done
+
+	require_elf "$ROOTFS/sbin/init"
+	require_elf "$ROOTFS/lib/ld-2.29.so"
+	require_elf "$ROOTFS/lib/libc-2.29.so"
+
+	while IFS= read -r -d '' library; do
+		if [[ ! -e "$library" ]]; then
+			die "$library: broken symlink"
+		fi
+	done < <(find "$ROOTFS/lib" -mindepth 1 -maxdepth 1 -type l -print0)
+
+	while IFS= read -r -d '' library; do
+		require_elf "$library"
+	done < <(find "$ROOTFS/lib" -mindepth 1 -maxdepth 1 -type f \
+		-name '*.so*' ! -name '*.py' -print0)
+
+	require_elf "$MODULE"
+
+	if ! vermagic="$(modinfo -F vermagic "$MODULE" 2>/dev/null)"; then
+		die "$MODULE: modinfo failed"
+	fi
+	if [[ "$vermagic" != "$KERNEL_RELEASE "* ]]; then
+		die "$MODULE: invalid vermagic"
+	fi
+
+	if ! aliases="$(modinfo -F alias "$MODULE" 2>/dev/null)"; then
+		die "$MODULE: modinfo failed"
+	fi
+	while IFS= read -r module_alias; do
+		if [[ "$module_alias" == "i2c:dawn_bmp280" ]]; then
+			return 0
+		fi
+	done <<< "$aliases"
+	die "$MODULE: missing alias i2c:dawn_bmp280"
+}
+
+if [[ "$#" -ne 1 ]]; then
+	die "usage: $0 [--check-only|target]"
+fi
+
+if [[ "$1" == "--check-only" ]]; then
+	preflight
+	printf 'Preflight successful\n'
+	exit 0
+fi
+
+SD_DEV=$1
+preflight
+
+if [[ ! -b "$SD_DEV" ]]; then
+	die "$SD_DEV: not a block device"
+fi
+
+if ! DEVICE_TYPE="$(lsblk -dnro TYPE "$SD_DEV")"; then
+	die "$SD_DEV: unable to query lsblk TYPE"
+fi
+if [[ "$DEVICE_TYPE" != "disk" ]]; then
+	die "$SD_DEV: lsblk TYPE is not disk"
+fi
+
+if ! REMOVABLE="$(lsblk -dnro RM "$SD_DEV")"; then
+	die "$SD_DEV: unable to query lsblk RM"
+fi
+if [[ "$REMOVABLE" != "1" ]]; then
+	die "$SD_DEV: is not a removable disk"
+fi
+
+if [[ "$SD_DEV" =~ [0-9]$ ]]; then
+	ROOTFS_PART="${SD_DEV}p1"
+else
+	ROOTFS_PART="${SD_DEV}1"
+fi
+
+cp "$KERNEL" "$ROOTFS"
+cp "$DTB" "$ROOTFS"
+
+printf 'Creating image file %s...\n' "$SD_DEV"
+dd if="/dev/zero" of="$SD_DEV" bs=1M count=4
+sync
+printf 'Creating partitions...\n'
+(
+	echo o
+	echo n
+	echo p
+	echo 1
+	echo 8192
+	echo
+	echo w
+) | fdisk "$SD_DEV"
+sync
+
+printf 'create rootfs on %s\n' "$ROOTFS_PART"
+mkfs.ext4 "$ROOTFS_PART" -L rootfs -d "$ROOTFS"
+sync
+
+printf 'write bootloader: %s\n' "$BOOTLOADER"
+dd if="$BOOTLOADER" of="$SD_DEV" seek=16 bs=512
+printf 'write opensbi: %s\n' "$OPENSBI"
+dd if="$OPENSBI" of="$SD_DEV" seek=200 bs=512
+printf 'write early dtb: %s\n' "$EARLY_DTB"
+dd if="$EARLY_DTB" of="$SD_DEV" seek=500 bs=512
+printf 'write uboot: %s\n' "$UBOOT"
+dd if="$UBOOT" of="$SD_DEV" seek=600 bs=512
+
+sync
