@@ -1,0 +1,27 @@
+# 编译输出
+output/
+*.o
+*.o.cmd
+*.cmd
+*.a
+*.so
+*.elf
+*.bin
+*.img
+*.uImage
+*.map
+*.dep/
+.depend/
+
+# 临时与备份文件
+*.swp
+*~
+*.bak
+*.orig
+*.rej
+
+# 编辑器与系统文件
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
